@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Hedera x402 Gateway — Dashboard</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0a0e17; color: #e5e7eb; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; color: #fff; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .card { background: #131826; border: 1px solid #232a3b; border-radius: 10px; padding: 16px; }
+  .card h2 { margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #8b95a8; }
+  .big { font-size: 28px; font-weight: 700; color: #34d399; }
+  .bar-bg { background: #232a3b; border-radius: 6px; height: 10px; overflow: hidden; margin-top: 8px; }
+  .bar-fill { background: linear-gradient(90deg, #34d399, #10b981); height: 100%; transition: width 0.4s ease; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { padding: 8px 0; border-bottom: 1px solid #1c2333; font-size: 13px; }
+  li:last-child { border-bottom: none; }
+  a { color: #60a5fa; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge.success { background: #064e3b; color: #34d399; }
+  .status { font-size: 12px; color: #6b7280; margin-top: 20px; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #34d399; margin-right: 6px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+  <h1><span class="pulse"></span>Hedera x402 Gateway — Live Dashboard</h1>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Gasto de hoy (guardrail)</h2>
+      <div class="big" id="spent">—</div>
+      <div class="bar-bg"><div class="bar-fill" id="bar" style="width:0%"></div></div>
+      <div style="margin-top:8px; font-size:12px; color:#8b95a8;" id="limits">—</div>
+    </div>
+
+    <div class="card">
+      <h2>Topic HCS de atestación</h2>
+      <div id="topic" style="font-size:13px;">—</div>
+    </div>
+
+    <div class="card">
+      <h2>Últimos pagos (on-chain)</h2>
+      <ul id="payments"><li>Cargando...</li></ul>
+    </div>
+
+    <div class="card">
+      <h2>Últimas atestaciones (HCS)</h2>
+      <ul id="attestations"><li>Cargando...</li></ul>
+    </div>
+  </div>
+
+  <div class="status" id="lastUpdate">Actualizando cada 3 segundos...</div>
+
+<script>
+async function refresh() {
+  try {
+    const res = await fetch('/admin/dashboard-data');
+    const data = await res.json();
+
+    const pct = Math.min(100, (Number(data.spend.spentToday) / Number(data.limits.maxDailyTinybars)) * 100);
+    document.getElementById('spent').textContent = `${data.spend.spentToday} tinybars`;
+    document.getElementById('bar').style.width = pct + '%';
+    document.getElementById('limits').textContent =
+      `Límite/tx: ${data.limits.maxTxTinybars} · Límite diario: ${data.limits.maxDailyTinybars} · Restante: ${data.spend.remainingToday}`;
+
+    document.getElementById('topic').innerHTML =
+      `<a href="https://hashscan.io/testnet/topic/${data.hcsTopicId}" target="_blank">${data.hcsTopicId} ↗</a>`;
+
+    document.getElementById('payments').innerHTML = data.recentPayments.map(p => `
+      <li>
+        <span class="badge success">${p.result}</span>
+        ${p.timestamp}<br>
+        <a href="${p.hashscanUrl}" target="_blank">${p.transactionId} ↗</a>
+      </li>
+    `).join('') || '<li>Sin pagos aún</li>';
+
+    document.getElementById('attestations').innerHTML = data.attestations.map(a => `
+      <li>
+        seq #${a.sequenceNumber} — ${a.decoded.amount} tinybars<br>
+        <a href="${a.hashscanUrl}" target="_blank">Topic en HashScan ↗</a>
+      </li>
+    `).join('') || '<li>Sin atestaciones aún</li>';
+
+    document.getElementById('lastUpdate').textContent = 'Última actualización: ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    document.getElementById('lastUpdate').textContent = 'Error actualizando: ' + err.message;
+  }
+}
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
