@@ -22,3 +22,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_spend_account_day
     ON spend_log (account_id, day);
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS agent_policies (
+    account_id TEXT PRIMARY KEY,
+    label TEXT,
+    max_tx_tinybars TEXT NOT NULL,
+    max_daily_tinybars TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);

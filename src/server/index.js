@@ -4,6 +4,9 @@ import { config } from "../config/env.js";
 import { resourceServer, dataRouteConfig, premiumRouteConfig } from "./payment.js";
 import { getSpendStatus } from "../guardrails/spend-guard.js";
 import { attestPayment } from "../guardrails/attestation.js";
+import { scheduleAgentPayment } from "../guardrails/scheduler.js";
+import { trackSchedule, startScheduleTracker } from "../guardrails/schedule-tracker.js";
+import { setAgentPolicy, listAgentPolicies, deleteAgentPolicy } from "../guardrails/policies.js";
 
 const app = express();
 app.use(express.json());
@@ -137,6 +140,61 @@ app.get("/admin/dashboard-data", async (req, res) => {
     hcsTopicId: config.hcsTopicId,
   });
 });
+
+// Crear o actualizar la política de un agente específico
+app.post("/admin/policies/:accountId", express.json(), (req, res) => {
+  const { label, maxTxTinybars, maxDailyTinybars } = req.body;
+
+  if (!maxTxTinybars || !maxDailyTinybars) {
+    return res.status(400).json({ error: "Faltan campos: maxTxTinybars, maxDailyTinybars" });
+  }
+
+  const policy = setAgentPolicy(req.params.accountId, { label, maxTxTinybars, maxDailyTinybars });
+  res.json({
+    ...policy,
+    maxTxTinybars: policy.maxTxTinybars.toString(),
+    maxDailyTinybars: policy.maxDailyTinybars.toString(),
+  });
+});
+
+// Listar todas las políticas personalizadas registradas
+app.get("/admin/policies", (req, res) => {
+  res.json(listAgentPolicies());
+});
+
+// Eliminar la política de un agente (vuelve a usar los límites globales)
+app.delete("/admin/policies/:accountId", (req, res) => {
+  const deleted = deleteAgentPolicy(req.params.accountId);
+  res.json({ deleted });
+});
+
+// El comprador pre-autoriza un pago futuro — el guardrail se evalúa aquí,
+// no en el momento de ejecución (que ocurre sin intervención humana).
+app.post("/schedule-payment", express.json(), async (req, res) => {
+  const { buyerAccountId, buyerPrivateKey, amountTinybars, delayMinutes, memo } = req.body;
+
+  if (!buyerAccountId || !buyerPrivateKey || !amountTinybars || !delayMinutes) {
+    return res.status(400).json({
+      error: "Faltan campos: buyerAccountId, buyerPrivateKey, amountTinybars, delayMinutes",
+    });
+  }
+
+  try {
+    const result = await scheduleAgentPayment({
+      buyerAccountId,
+      buyerPrivateKey,
+      amountTinybars,
+      delayMinutes,
+      memo,
+    });
+    trackSchedule(result.scheduleId, buyerAccountId, amountTinybars);
+    res.json(result);
+  } catch (error) {
+    res.status(422).json({ error: error.message });
+  }
+});
+
+startScheduleTracker();
 
 app.listen(config.port, () => {
   console.log(`Servidor escuchando en http://localhost:${config.port}`);

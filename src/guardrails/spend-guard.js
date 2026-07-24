@@ -1,5 +1,6 @@
 import { config } from "../config/env.js";
 import { db } from "./db.js";
+import { getAgentPolicy } from "./policies.js";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -23,25 +24,26 @@ function getSpentToday(accountId) {
 
 export function checkSpendLimit(accountId, amountTinybars) {
   const amount = BigInt(amountTinybars);
+  const policy = getAgentPolicy(accountId);
 
-  if (amount > config.maxTxTinybars) {
+  if (amount > policy.maxTxTinybars) {
     return {
       allowed: false,
-      reason: `Monto ${amount} excede el límite por transacción (${config.maxTxTinybars} tinybars)`,
+      reason: `Monto ${amount} excede el límite por transacción de este agente (${policy.maxTxTinybars} tinybars${policy.isCustom ? ", política personalizada" : ", límite global"})`,
     };
   }
 
   const spentToday = getSpentToday(accountId);
   const projected = spentToday + amount;
 
-  if (projected > config.maxDailyTinybars) {
+  if (projected > policy.maxDailyTinybars) {
     return {
       allowed: false,
-      reason: `Gasto diario proyectado ${projected} excede el límite diario (${config.maxDailyTinybars} tinybars). Ya gastado hoy: ${spentToday}`,
+      reason: `Gasto diario proyectado ${projected} excede el límite diario de este agente (${policy.maxDailyTinybars} tinybars${policy.isCustom ? ", política personalizada" : ", límite global"}). Ya gastado hoy: ${spentToday}`,
     };
   }
 
-  return { allowed: true, spentToday, projected };
+  return { allowed: true, spentToday, projected, policy };
 }
 
 export function recordSpend(accountId, amountTinybars) {
@@ -50,12 +52,15 @@ export function recordSpend(accountId, amountTinybars) {
 
 export function getSpendStatus(accountId) {
   const spentToday = getSpentToday(accountId);
+  const policy = getAgentPolicy(accountId);
 
   return {
     accountId,
+    label: policy.label,
+    isCustomPolicy: policy.isCustom,
     spentToday: spentToday.toString(),
-    maxDaily: config.maxDailyTinybars.toString(),
-    maxPerTx: config.maxTxTinybars.toString(),
-    remainingToday: (config.maxDailyTinybars - spentToday).toString(),
+    maxDaily: policy.maxDailyTinybars.toString(),
+    maxPerTx: policy.maxTxTinybars.toString(),
+    remainingToday: (policy.maxDailyTinybars - spentToday).toString(),
   };
 }

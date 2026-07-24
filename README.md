@@ -22,9 +22,15 @@ persisted in SQLite so limits survive restarts.
 - `src/guardrails/guarded-fetch.js` — client-side wrapper that decodes the
   `PAYMENT-REQUIRED` header, checks the guardrail, and only then lets
   `@x402/fetch` sign and settle the payment.
-- `src/server/index.js` — Express app: the protected route
-  (`GET /data/example`) plus admin endpoints (`GET /admin/limits`,
-  `GET /admin/spend/:accountId`).
+- `src/server/index.js` — Express app: two protected routes
+  (`GET /data/example`, `GET /data/premium`) proving the same middleware
+  reuses across endpoints, plus admin endpoints (`GET /admin/limits`,
+  `GET /admin/spend/:accountId`, `GET /admin/dashboard-data`).
+  - `src/guardrails/attestation.js` — writes an immutable HCS message for
+  every settled payment (topic `0.0.9696800` on testnet).
+- `public/dashboard.html` — live-refreshing dashboard (polls
+  `/admin/dashboard-data` every 3s) showing spend, recent payments, and
+  HCS attestations with direct HashScan links.
 
 ## Stack
 
@@ -57,6 +63,49 @@ including:
 - Token association: https://hashscan.io/testnet/transaction/0.0.9692115-1784779292-981637429
 - First settled x402 payment: https://hashscan.io/testnet/transaction/0.0.9185802-1784784147-934492557
 - Buyer account creation: https://hashscan.io/testnet/transaction/0.0.9692115-1784780865-597032507
+
+## Live dashboard
+
+Run the server and open `http://localhost:4021/dashboard.html` — it polls
+the gateway every 3 seconds and shows live spend against the configured
+guardrail, recent on-chain payments, and HCS attestations, each linking
+directly to HashScan.
+
+## Published as a package
+
+The guardrail engine (spend limits + per-agent policies) is also published
+as a standalone, framework-agnostic npm package:
+
+**https://www.npmjs.com/package/@zero-two-labs/hedera-x402-guard**
+
+\`\`\`bash
+npm install @zero-two-labs/hedera-x402-guard
+\`\`\`
+
+This is the core claim of this project: it's not a demo app, it's an
+installable piece of infrastructure that any x402-on-Hedera integration
+can drop in.
+
+## Pre-authorized payments (Hedera Scheduled Transactions)
+
+Agents can pre-authorize a future payment in a single call via
+`POST /schedule-payment` — Hedera's native Scheduled Transactions execute
+it automatically when it comes due, with no signer online at execution
+time. A background poller detects execution via the Mirror Node and
+records the spend + HCS attestation retroactively.
+
+## Per-agent spend policies
+
+`POST /admin/policies/:accountId` registers a custom per-transaction and
+daily limit for a specific buyer account, falling back to global limits
+for any agent without one — `GET /admin/policies` lists them all.
+
+## Payment attestation (HCS)
+
+Every settled payment triggers a message to a dedicated HCS topic
+(`0.0.9696800` on testnet), independently verifiable via the Hedera Mirror
+Node or HashScan — a public, immutable audit log decoupled from this
+server's own logs.
 
 ## Why this is infrastructure, not an app
 
