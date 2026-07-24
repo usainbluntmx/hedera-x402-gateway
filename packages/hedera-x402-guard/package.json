@@ -4,7 +4,7 @@
   "description": "Spend guardrails and per-agent policies for x402 payments on Hedera — SQLite-backed, framework-agnostic.",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "keywords": [
     "hedera",
