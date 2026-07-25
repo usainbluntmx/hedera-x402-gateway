@@ -1,6 +1,6 @@
 {
   "name": "@zero-two-labs/hedera-x402-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Spend guardrails and per-agent policies for x402 payments on Hedera — SQLite-backed, framework-agnostic.",
   "main": "src/index.js",
   "scripts": {

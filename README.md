@@ -32,6 +32,13 @@ persisted in SQLite so limits survive restarts.
   `/admin/dashboard-data` every 3s) showing spend, recent payments, and
   HCS attestations with direct HashScan links.
 
+> **Note on the Mirror Node `payer_account_id`:** x402's Hedera exact
+> scheme uses a facilitator-sponsored fee model — the facilitator account
+> appears as the Hedera transaction payer (covering network fees), while
+> the actual buyer/seller transfer is visible in the transaction's
+> token/hbar transfer list. This is protocol behavior, not
+> gateway-specific.
+
 ## Stack
 
 - `@x402/core`, `@x402/express`, `@x402/hedera`, `@x402/fetch` (x402 v2
@@ -54,6 +61,12 @@ In a second terminal:
 \`\`\`bash
 node scripts/pay-and-fetch.js
 \`\`\`
+
+> **Note:** Guardrail state (spend history, agent policies) persists in
+> `data/guardrails.sqlite` across runs. If you set a restrictive custom
+> policy while testing, remember it stays active for that account —
+> use `DELETE /admin/policies/:accountId` to reset it, or delete
+> `data/guardrails.sqlite` to start clean.
 
 ## On-chain evidence (Hedera testnet)
 

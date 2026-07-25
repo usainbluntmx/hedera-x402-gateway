@@ -118,16 +118,22 @@ app.get("/admin/dashboard-data", async (req, res) => {
   }));
 
   // Últimas atestaciones en HCS
+  let attestations = [];
+
+if (config.hcsTopicId) {
   const hcsUrl = `https://testnet.mirrornode.hedera.com/api/v1/topics/${config.hcsTopicId}/messages?limit=5&order=desc`;
   const hcsRes = await fetch(hcsUrl);
   const hcsData = await hcsRes.json();
 
-  const attestations = hcsData.messages.map((m) => ({
-    sequenceNumber: m.sequence_number,
-    timestamp: m.consensus_timestamp,
-    decoded: JSON.parse(Buffer.from(m.message, "base64").toString("utf-8")),
-    hashscanUrl: `https://hashscan.io/testnet/topic/${config.hcsTopicId}`,
-  }));
+  if (Array.isArray(hcsData.messages)) {
+    attestations = hcsData.messages.map((m) => ({
+      sequenceNumber: m.sequence_number,
+      timestamp: m.consensus_timestamp,
+      decoded: JSON.parse(Buffer.from(m.message, "base64").toString("utf-8")),
+      hashscanUrl: `https://hashscan.io/testnet/topic/${config.hcsTopicId}`,
+    }));
+  }
+}
 
   res.json({
     limits: {
