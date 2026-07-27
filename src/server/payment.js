@@ -51,3 +51,23 @@ export const premiumRouteConfig = {
   description: "Acceso a datos premium vía x402 en Hedera testnet (pago en HBAR)",
   mimeType: "application/json",
 };
+
+export const USDC_TESTNET_ASSET_ID = "0.0.429274"; // confirmado: @x402/hedera HEDERA_TESTNET_USDC
+export const USDC_DECIMALS = 6; // confirmado: @x402/hedera HEDERA_USDC_DECIMALS
+
+// Precio: 0.05 USDC = 50,000 unidades atómicas (6 decimales)
+export const usdcRouteConfig = {
+  accepts: [
+    {
+      scheme: "exact",
+      network: HEDERA_NETWORK,
+      payTo: config.hederaAccountId,
+      price: {
+        asset: USDC_TESTNET_ASSET_ID,
+        amount: "50000",
+      },
+    },
+  ],
+  description: "Acceso a datos de ejemplo vía x402 en Hedera testnet (pago en USDC)",
+  mimeType: "application/json",
+};

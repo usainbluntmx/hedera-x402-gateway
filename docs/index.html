@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hedera x402 Gateway — Payment infrastructure for autonomous agents</title>
+<meta name="description" content="A reusable x402 payment gateway for Hedera with spend guardrails, HCS attestation, and Scheduled Transactions — built for AI agents that transact without human supervision.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0E1116;
+    --panel: #161B22;
+    --panel-raised: #1C232D;
+    --line: #2A313C;
+    --text: #E8E6DE;
+    --muted: #8B92A0;
+    --gold: #D4A017;
+    --gold-bright: #E8B923;
+    --teal: #4FD1C5;
+    --danger: #E5734A;
+    --radius: 3px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .rise { opacity: 0; animation: rise 0.7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(.2,.7,.2,1), transform 0.7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 3px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  h1, h2, h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold);
+  }
+
+  /* ---------- NAV ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(14,17,22,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+  .brand span { color: var(--gold); }
+  .nav-links { display: flex; gap: 28px; font-size: 14px; color: var(--muted); }
+  .nav-links a { text-decoration: none; transition: color 0.15s; }
+  .nav-links a:hover { color: var(--text); }
+  @media (max-width: 640px) { .nav-links { display: none; } }
+
+  /* ---------- HERO ---------- */
+  .hero { position: relative; padding: 88px 0 64px; border-bottom: 1px solid var(--line); overflow: hidden; }
+  #hashgraph {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0.55;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse 90% 75% at 60% 20%, black 40%, transparent 92%);
+  }
+  .hero .wrap { position: relative; z-index: 1; }
+  .hero h1 {
+    font-size: clamp(34px, 5.5vw, 58px);
+    line-height: 1.05;
+    margin: 20px 0 22px;
+    max-width: 780px;
+  }
+  .hero h1 em { font-style: normal; color: var(--gold); }
+  .hero p.lede { font-size: 18px; color: var(--muted); max-width: 620px; margin-bottom: 36px; }
+
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--gold); color: #1a1503; border-color: var(--gold); }
+  .btn-primary:hover { background: var(--gold-bright); }
+  .btn-ghost { background: transparent; color: var(--text); }
+  .btn-ghost:hover { border-color: var(--muted); }
+
+  /* receipt ticker */
+  .receipt {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .receipt-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px dashed var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .receipt-head .live { color: var(--teal); display: flex; align-items: center; gap: 6px; }
+  .receipt-head .live::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--teal); animation: blink 1.6s infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+  .ticker-viewport { overflow: hidden; }
+  .ticker-track { display: flex; flex-direction: column; }
+  .tick-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 14px;
+    padding: 11px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .tick-row:last-child { border-bottom: none; }
+  .tick-tag { color: var(--gold); font-size: 11px; }
+  .tick-id { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tick-status { color: var(--teal); font-size: 11px; }
+
+  /* ---------- SECTION shared ---------- */
+  section { padding: 72px 0; border-bottom: 1px solid var(--line); }
+  .section-head { max-width: 640px; margin-bottom: 44px; }
+  .section-head h2 { font-size: clamp(26px, 3.5vw, 36px); margin: 14px 0 16px; }
+  .section-head p { color: var(--muted); font-size: 16px; }
+
+  /* ---------- PROBLEM ---------- */
+  .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  @media (max-width: 760px) { .problem-grid { grid-template-columns: 1fr; } }
+  .problem-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px;
+  }
+  .problem-card .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .problem-card.bad .tag { color: var(--danger); }
+  .problem-card.good .tag { color: var(--teal); }
+  .problem-card h3 { font-size: 18px; margin: 12px 0 10px; }
+  .problem-card p { color: var(--muted); font-size: 14.5px; }
+
+  /* ---------- FLOW ---------- */
+  .flow { display: flex; flex-direction: column; gap: 0; position: relative; }
+  .flow::before {
+    content: '';
+    position: absolute; left: 27px; top: 0; bottom: 0;
+    width: 1px; background: var(--line);
+  }
+  .flow-progress {
+    position: absolute; left: 27px; top: 0; width: 1px; height: 0%;
+    background: linear-gradient(180deg, var(--gold), var(--teal));
+    transition: height 0.1s linear;
+    box-shadow: 0 0 8px var(--gold);
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 20px;
+    padding: 26px 0;
+    border-top: 1px solid var(--line);
+    position: relative;
+  }
+  .flow-step:first-child { border-top: none; }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--gold);
+    border: 1px solid var(--line);
+    background: var(--ink);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 2;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .flow-step.active .flow-num {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 4px rgba(212,160,23,0.15);
+  }
+  .flow-step h3 { font-size: 19px; margin-bottom: 8px; }
+  .flow-step p { color: var(--muted); font-size: 15px; max-width: 560px; }
+  .flow-step .svc {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--teal);
+    border: 1px solid rgba(79,209,197,0.3);
+    padding: 3px 9px;
+    border-radius: var(--radius);
+  }
+
+  /* ---------- EVIDENCE / STAMP ---------- */
+  .evidence-wrap { display: grid; grid-template-columns: 1fr 260px; gap: 48px; align-items: start; }
+  @media (max-width: 820px) { .evidence-wrap { grid-template-columns: 1fr; } }
+
+  .tx-list { display: flex; flex-direction: column; gap: 10px; }
+  .tx-item {
+    display: grid;
+    grid-template-columns: 100px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .tx-item:hover { border-color: var(--gold); background: var(--panel-raised); }
+  .tx-item .kind { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--gold); }
+  .tx-item .hash { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-item .arrow { color: var(--muted); font-size: 13px; }
+
+  .stamp-box {
+    position: sticky; top: 90px;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    padding: 30px 20px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+  }
+  .stamp {
+    width: 148px; height: 148px;
+    border-radius: 50%;
+    border: 2.5px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    opacity: 0; transform: scale(1.5) rotate(-14deg);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .stamp.stamped { opacity: 1; transform: scale(1) rotate(-8deg); }
+  .stamp-inner {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+    padding: 14px;
+  }
+  .stamp-note { margin-top: 18px; font-size: 12.5px; color: var(--muted); }
+  .stamp-note code { font-family: 'JetBrains Mono', monospace; color: var(--teal); }
+
+  /* ---------- INSTALL ---------- */
+  .terminal {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    max-width: 720px;
+    box-shadow: 0 30px 80px -30px rgba(212,160,23,0.12);
+  }
+  .terminal-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-raised);
+  }
+  .terminal-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .terminal-title {
+    margin-left: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .terminal-copy {
+    margin-left: auto;
+    background: none; border: 1px solid var(--line); color: var(--muted);
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    padding: 3px 10px; border-radius: var(--radius); cursor: pointer;
+  }
+  .terminal-copy:hover { color: var(--text); border-color: var(--muted); }
+  .terminal-body {
+    padding: 22px 20px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.9;
+    min-height: 168px;
+  }
+  .term-line { color: var(--text); }
+  .term-prompt { color: var(--gold); margin-right: 8px; }
+  .term-cmd { color: var(--teal); }
+  .term-out { color: var(--muted); display: block; }
+  .term-ok { color: var(--gold); }
+  .cursor {
+    display: inline-block; width: 8px; height: 16px;
+    background: var(--gold); vertical-align: middle; margin-left: 2px;
+    animation: blink-cursor 0.9s steps(1) infinite;
+  }
+  @keyframes blink-cursor { 50% { opacity: 0; } }
+  .why-strip {
+    display: flex; gap: 32px; flex-wrap: wrap; margin-top: 28px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--muted);
+  }
+  .why-strip span { color: var(--gold); }
+
+  /* ---------- FOOTER ---------- */
+  footer { padding: 48px 0 60px; }
+  .footer-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+  .footer-brand { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
+  .footer-brand span { color: var(--gold); }
+  .footer-links { display: flex; gap: 24px; font-size: 13.5px; color: var(--muted); }
+  .footer-links a { text-decoration: none; }
+  .footer-links a:hover { color: var(--text); }
+  .footer-note { margin-top: 22px; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 22px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">Hedera x402 <span>Gateway</span></div>
+    <div class="nav-links">
+      <a href="#problem">Why</a>
+      <a href="#flow">How it works</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#install">Install</a>
+    </div>
+    <a href="#install" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">Get started</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <canvas id="hashgraph" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="eyebrow rise" style="animation-delay:0.05s">Built on Hedera · gossip-about-gossip consensus, live above</div>
+    <h1 class="rise" style="animation-delay:0.15s">Payment rails your AI agent<br>can't <em>overspend</em>.</h1>
+    <p class="lede rise" style="animation-delay:0.28s">A reusable x402 payment gateway for Hedera. Every route is pay-per-request — in native HBAR or USDC — every payment is checked against a per-asset spend limit before it's signed, and every settlement is stamped to an immutable log independent of our own server.</p>
+    <div class="cta-row rise" style="animation-delay:0.4s">
+      <a href="https://github.com/usainbluntmx/hedera-x402-gateway" class="btn btn-primary" target="_blank" rel="noopener">View source on GitHub →</a>
+      <a href="https://www.npmjs.com/package/@zero-two-labs/hedera-x402-guard" class="btn btn-ghost" target="_blank" rel="noopener">npm install</a>
+      <a href="#video" class="btn btn-ghost">Watch the 5-min demo</a>
+    </div>
+
+    <div class="receipt rise" style="animation-delay:0.52s">
+      <div class="receipt-head">
+        <span>settlement_log.testnet</span>
+        <span class="live">hedera:testnet</span>
+      </div>
+      <div class="ticker-viewport">
+        <div class="tick-row"><span class="tick-tag">CRYPTOTRANSFER</span><span class="tick-id">0.0.9185802-1784870547-007195042</span><span class="tick-status">SUCCESS</span></div>
+        <div class="tick-row"><span class="tick-tag">USDC PAYMENT</span><span class="tick-id">0.05 USDC · 0.0.429274</span><span class="tick-status">SUCCESS</span></div>
+        <div class="tick-row"><span class="tick-tag">HCS SUBMIT</span><span class="tick-id">topic 0.0.9696800 · seq #6</span><span class="tick-status">SUCCESS</span></div>
+        <div class="tick-row"><span class="tick-tag">SCHEDULECREATE</span><span class="tick-id">0.0.9706160 · autonomous</span><span class="tick-status">EXECUTED</span></div>
+        <div class="tick-row"><span class="tick-tag">CRYPTOTRANSFER</span><span class="tick-id">0.0.9695602-1784867377-568342570</span><span class="tick-status">SUCCESS</span></div>
+        <div class="tick-row"><span class="tick-tag">TOKENASSOCIATE</span><span class="tick-id">0.0.9692115-1784779292-981637429</span><span class="tick-status">SUCCESS</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="problem">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The problem</div>
+      <h2>Agents that pay for themselves need limits they can't talk their way around.</h2>
+      <p>x402 lets software pay software with no human in the loop. That's the point — and the risk. A prompt injection, a bad loop, or a misconfigured budget shouldn't be able to drain a wallet one micropayment at a time.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card bad">
+        <div class="tag">Without a guardrail</div>
+        <h3>The agent is the only limit</h3>
+        <p>Every x402 client signs whatever it's told to sign. If the agent misbehaves, nothing between it and the blockchain says no.</p>
+      </div>
+      <div class="problem-card good">
+        <div class="tag">With this gateway</div>
+        <h3>The limit is checked before the signature</h3>
+        <p>Per-transaction and daily caps — global or per agent — are evaluated the moment a payment is proposed, not after it's already settled.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="flow">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">How it works</div>
+      <h2>Five pieces, one execution order.</h2>
+      <p>Each step runs on real Hedera testnet rails — not a simulation layered on top.</p>
+    </div>
+    <div class="flow">
+      <div class="flow-progress" id="flowProgress"></div>
+      <div class="flow-step">
+        <div class="flow-num">01</div>
+        <div>
+          <h3>Any route becomes pay-per-request</h3>
+          <p>One middleware call turns an ordinary Express route into an x402 resource — settled in native HBAR or USDC, whichever fits how you price.</p>
+          <span class="svc">HBAR + USDC settlement</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">02</div>
+        <div>
+          <h3>The guardrail checks before signing</h3>
+          <p>The buyer's proposed payment is evaluated against its policy — a custom per-agent limit, or the global default — before any transaction is built.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">03</div>
+        <div>
+          <h3>The payment settles on-chain</h3>
+          <p>x402's exact scheme constructs and settles a real Hedera transfer through the standard facilitator — verifiable independently on HashScan.</p>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">04</div>
+        <div>
+          <h3>Every settlement is stamped to HCS</h3>
+          <p>A message documenting the payment is submitted to a dedicated Consensus Service topic — an audit trail that survives even if this server disappears.</p>
+          <span class="svc">Consensus Service</span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">05</div>
+        <div>
+          <h3>Agents can pre-authorize the future</h3>
+          <p>A single call schedules a payment days in advance. Hedera's network executes it autonomously — no signer needs to be online when it fires.</p>
+          <span class="svc">Scheduled Transactions</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="evidence">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">On-chain evidence</div>
+      <h2>Not a mockup. Real transactions, testnet.</h2>
+      <p>Every link below settles on HashScan — click through and verify it yourself.</p>
+    </div>
+    <div class="evidence-wrap">
+      <div class="tx-list">
+        <a class="tx-item" href="https://hashscan.io/testnet/transaction/0.0.9692115-1784779292-981637429" target="_blank" rel="noopener">
+          <span class="kind">TOKEN ASSOC</span><span class="hash">0.0.9692115-1784779292-981637429</span><span class="arrow">↗</span>
+        </a>
+        <a class="tx-item" href="https://hashscan.io/testnet/transaction/0.0.9185802-1784784147-934492557" target="_blank" rel="noopener">
+          <span class="kind">FIRST PAYMENT</span><span class="hash">0.0.9185802-1784784147-934492557</span><span class="arrow">↗</span>
+        </a>
+        <a class="tx-item" href="https://hashscan.io/testnet/transaction/0.0.9185802-1784789312-711297525" target="_blank" rel="noopener">
+          <span class="kind">PREMIUM ROUTE</span><span class="hash">0.0.9185802-1784789312-711297525</span><span class="arrow">↗</span>
+        </a>
+        <a class="tx-item" href="https://hashscan.io/testnet/schedule/0.0.9706160" target="_blank" rel="noopener">
+          <span class="kind">SCHEDULED</span><span class="hash">schedule 0.0.9706160 — autonomous execution</span><span class="arrow">↗</span>
+        </a>
+        <a class="tx-item" href="https://hashscan.io/testnet/topic/0.0.9696800" target="_blank" rel="noopener">
+          <span class="kind">HCS TOPIC</span><span class="hash">0.0.9696800 — every attestation, immutable</span><span class="arrow">↗</span>
+        </a>
+        <a class="tx-item" href="https://github.com/usainbluntmx/hedera-x402-gateway/blob/main/EVIDENCE.md" target="_blank" rel="noopener">
+          <span class="kind">FULL LOG</span><span class="hash">EVIDENCE.md — complete transaction list</span><span class="arrow">↗</span>
+        </a>
+      </div>
+
+      <div class="stamp-box">
+        <div class="stamp" id="stamp">
+          <div class="stamp-inner">✓ VERIFIED<br>ON HEDERA<br>TESTNET</div>
+        </div>
+        <p class="stamp-note">Every payment attested at <code>0.0.9696800</code> — check it independently on the Hedera Mirror Node.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Try it yourself</div>
+      <h2>Infrastructure you install, not a demo you watch.</h2>
+      <p>The guardrail engine ships as a standalone, tested npm package — framework-agnostic, SQLite-backed. Paste it in your own terminal right now.</p>
+    </div>
+    <div class="terminal reveal" id="termCard">
+      <div class="terminal-head">
+        <div class="terminal-dot" style="background:#4a5262"></div>
+        <div class="terminal-dot" style="background:#4a5262"></div>
+        <div class="terminal-dot" style="background:#4a5262"></div>
+        <span class="terminal-title">zsh — hedera-x402-guard</span>
+        <button class="terminal-copy" onclick="copyInstall(this)">copy</button>
+      </div>
+      <div class="terminal-body" id="termBody">
+        <div class="term-line"><span class="term-prompt">$</span><span class="term-cmd" id="typedCmd"></span><span class="cursor" id="termCursor"></span></div>
+        <div id="termOutput"></div>
+      </div>
+    </div>
+    <div class="why-strip">
+      <div><span>2</span> settlement assets — HBAR and USDC, tracked separately</div>
+      <div><span>0</span> extra config for testnet facilitator</div>
+      <div><span>13</span> tests shipped in the published package</div>
+    </div>
+  </div>
+</section>
+
+<footer id="video">
+  <div class="wrap">
+    <div class="footer-row">
+      <div class="footer-brand">Hedera x402 Gateway</div>
+      <div class="footer-links">
+        <a href="https://github.com/usainbluntmx/hedera-x402-gateway" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/@zero-two-labs/hedera-x402-guard" target="_blank" rel="noopener">npm</a>
+        <a href="https://github.com/usainbluntmx/hedera-x402-gateway/blob/main/EVIDENCE.md" target="_blank" rel="noopener">Evidence</a>
+      </div>
+    </div>
+    <p class="footer-note">Open-source, MIT licensed, and built to be installed — not just demoed. Currently a Hedera testnet reference implementation; production deployments should complete their own security review. Created by <a href="#" style="color:var(--gold);">Zero Two Labs</a>.</p>
+  </div>
+</footer>
+
+<script>
+  /* ---------- Copy install command ---------- */
+  function copyInstall(btn) {
+    navigator.clipboard.writeText('npm install @zero-two-labs/hedera-x402-guard').then(() => {
+      const original = btn.textContent;
+      btn.textContent = 'copied';
+      setTimeout(() => btn.textContent = original, 1400);
+    });
+  }
+
+  /* ---------- Stamp on scroll ---------- */
+  const stamp = document.getElementById('stamp');
+  const stampIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { stamp.classList.add('stamped'); stampIO.disconnect(); }
+    });
+  }, { threshold: 0.4 });
+  if (stamp) stampIO.observe(stamp);
+
+  /* ---------- Generic scroll reveal ---------- */
+  const revealEls = document.querySelectorAll('.reveal, .problem-card, .flow-step, .tx-item');
+  revealEls.forEach(el => el.classList.add('reveal'));
+  const revealIO = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('in'), i * 60);
+        revealIO.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  revealEls.forEach(el => revealIO.observe(el));
+
+  /* ---------- Flow progress line, driven by scroll ---------- */
+  const flowEl = document.querySelector('.flow');
+  const flowProgress = document.getElementById('flowProgress');
+  const flowSteps = document.querySelectorAll('.flow-step');
+  function updateFlowProgress() {
+    if (!flowEl) return;
+    const rect = flowEl.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const total = rect.height;
+    const visibleStart = vh * 0.75;
+    const progressed = Math.min(Math.max(visibleStart - rect.top, 0), total);
+    const pct = total > 0 ? (progressed / total) * 100 : 0;
+    flowProgress.style.height = pct + '%';
+    flowSteps.forEach((step) => {
+      const sRect = step.getBoundingClientRect();
+      step.classList.toggle('active', sRect.top < visibleStart && sRect.bottom > 0);
+    });
+  }
+  window.addEventListener('scroll', updateFlowProgress, { passive: true });
+  window.addEventListener('resize', updateFlowProgress);
+  updateFlowProgress();
+
+  /* ---------- Terminal typing sequence ---------- */
+  const typedCmd = document.getElementById('typedCmd');
+  const termOutput = document.getElementById('termOutput');
+  const termCursor = document.getElementById('termCursor');
+  const installCmd = 'npm install @zero-two-labs/hedera-x402-guard';
+  let typingStarted = false;
+
+  function typeText(el, text, speed, done) {
+    let i = 0;
+    (function step() {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i);
+        i++;
+        setTimeout(step, speed);
+      } else if (done) done();
+    })();
+  }
+
+  function runTerminalSequence() {
+    typeText(typedCmd, installCmd, 32, () => {
+      setTimeout(() => {
+        termCursor.style.display = 'none';
+        const outLines = [
+          { text: 'added 1 package, audited 2 packages in 640ms', cls: 'term-out' },
+          { text: '✓ spend guardrails ready — SQLite-backed, framework-agnostic', cls: 'term-ok' },
+        ];
+        let li = 0;
+        function addLine() {
+          if (li >= outLines.length) return;
+          const div = document.createElement('div');
+          div.className = outLines[li].cls;
+          termOutput.appendChild(div);
+          typeText(div, outLines[li].text, 12, () => { li++; setTimeout(addLine, 180); });
+        }
+        addLine();
+      }, 300);
+    });
+  }
+
+  const termCard = document.getElementById('termCard');
+  const termIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !typingStarted) {
+        typingStarted = true;
+        setTimeout(runTerminalSequence, 350);
+        termIO.disconnect();
+      }
+    });
+  }, { threshold: 0.4 });
+  if (termCard) termIO.observe(termCard);
+
+  /* ---------- Hashgraph ambient animation (hero background) ---------- */
+  (function hashgraph() {
+    const canvas = document.getElementById('hashgraph');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let w, h, nodes, gossips, dpr;
+
+    function resize() {
+      const hero = document.querySelector('.hero');
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = hero.offsetWidth; h = hero.offsetHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      initNodes();
+    }
+
+    function initNodes() {
+      const count = w < 640 ? 9 : 14;
+      nodes = Array.from({ length: count }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.12,
+        r: Math.random() * 1.4 + 1.8,
+      }));
+      gossips = [];
+    }
+
+    function spawnGossip() {
+      if (nodes.length < 2) return;
+      const a = nodes[Math.floor(Math.random() * nodes.length)];
+      let b = nodes[Math.floor(Math.random() * nodes.length)];
+      let tries = 0;
+      while (b === a && tries < 5) { b = nodes[Math.floor(Math.random() * nodes.length)]; tries++; }
+      gossips.push({ a, b, t: 0, speed: 0.006 + Math.random() * 0.006 });
+    }
+
+    let frame = 0;
+    function draw() {
+      frame++;
+      ctx.clearRect(0, 0, w, h);
+
+      // move nodes gently
+      nodes.forEach(n => {
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > w) n.vx *= -1;
+        if (n.y < 0 || n.y > h) n.vy *= -1;
+      });
+
+      // faint connective mesh
+      ctx.lineWidth = 1;
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 240) {
+            ctx.strokeStyle = `rgba(139,146,160,${0.10 * (1 - dist / 240)})`;
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // gossip particles (gold traveling dots = "gossip about gossip")
+      if (frame % 42 === 0) spawnGossip();
+      gossips = gossips.filter(g => g.t <= 1);
+      gossips.forEach(g => {
+        g.t += g.speed;
+        const x = g.a.x + (g.b.x - g.a.x) * g.t;
+        const y = g.a.y + (g.b.y - g.a.y) * g.t;
+        ctx.strokeStyle = 'rgba(212,160,23,0.35)';
+        ctx.beginPath();
+        ctx.moveTo(g.a.x, g.a.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.fillStyle = '#D4A017';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // nodes
+      nodes.forEach(n => {
+        ctx.fillStyle = 'rgba(232,230,222,0.55)';
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      if (!prefersReduced) requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    draw();
+    if (prefersReduced) { spawnGossip(); spawnGossip(); draw(); }
+  })();
+</script>
+
+</body>
+</html>

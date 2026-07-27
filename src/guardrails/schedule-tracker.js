@@ -1,6 +1,8 @@
 import { recordSpend } from "./spend-guard.js";
 import { attestPayment } from "./attestation.js";
 
+const HBAR_ASSET_ID = "0.0.0"; // este tracker solo maneja schedules de HBAR nativo
+
 // Registro en memoria de schedules pendientes de confirmar
 const pendingSchedules = new Map(); // scheduleId -> { buyerAccountId, amountTinybars }
 
@@ -22,7 +24,7 @@ export async function pollPendingSchedules() {
     const data = await res.json();
 
     if (data.executed_timestamp) {
-      recordSpend(info.buyerAccountId, info.amountTinybars);
+      recordSpend(info.buyerAccountId, HBAR_ASSET_ID, info.amountTinybars);
       info.confirmed = true;
 
       console.log(`✅ Schedule ${scheduleId} confirmado ejecutado — gasto registrado`);
@@ -31,7 +33,7 @@ export async function pollPendingSchedules() {
         route: "/schedule-payment",
         payer: info.buyerAccountId,
         amount: info.amountTinybars,
-        asset: "0.0.0",
+        asset: HBAR_ASSET_ID,
         transactionId: data.transaction_id,
       });
     }

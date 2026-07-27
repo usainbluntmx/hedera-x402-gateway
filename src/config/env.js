@@ -6,8 +6,18 @@ export const config = {
   hederaNetwork: process.env.HEDERA_NETWORK || "testnet",
   facilitatorUrl: process.env.FACILITATOR_URL || "https://x402.org/facilitator",
   port: Number(process.env.PORT) || 4021,
-  maxTxTinybars: BigInt(process.env.MAX_TX_TINYBARS || "5000000"),
-  maxDailyTinybars: BigInt(process.env.MAX_DAILY_TINYBARS || "20000000"),
+  assetDefaults: {
+    "0.0.0": {
+      // HBAR nativo — tinybars, 8 decimales
+      maxTx: BigInt(process.env.MAX_TX_TINYBARS || "5000000"),
+      maxDaily: BigInt(process.env.MAX_DAILY_TINYBARS || "20000000"),
+    },
+    "0.0.429274": {
+      // USDC testnet — 6 decimales
+      maxTx: BigInt(process.env.MAX_TX_USDC_UNITS || "500000"), // 0.50 USDC
+      maxDaily: BigInt(process.env.MAX_DAILY_USDC_UNITS || "5000000"), // 5.00 USDC
+    },
+  },
   hcsTopicId: process.env.HCS_TOPIC_ID,
 };
 

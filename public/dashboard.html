@@ -8,10 +8,15 @@
   h1 { font-size: 20px; color: #fff; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
   .card { background: #131826; border: 1px solid #232a3b; border-radius: 10px; padding: 16px; }
-  .card h2 { margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #8b95a8; }
-  .big { font-size: 28px; font-weight: 700; color: #34d399; }
+  .card h2 { margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #8b95a8; display: flex; justify-content: space-between; align-items: center; }
+  .asset-tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; background: #1c2333; color: #8b95a8; text-transform: none; letter-spacing: 0; }
+  .asset-tag.hbar { color: #34d399; }
+  .asset-tag.usdc { color: #60a5fa; }
+  .big { font-size: 26px; font-weight: 700; color: #34d399; }
+  .big.usdc { color: #60a5fa; }
   .bar-bg { background: #232a3b; border-radius: 6px; height: 10px; overflow: hidden; margin-top: 8px; }
   .bar-fill { background: linear-gradient(90deg, #34d399, #10b981); height: 100%; transition: width 0.4s ease; }
+  .bar-fill.usdc { background: linear-gradient(90deg, #60a5fa, #3b82f6); }
   ul { list-style: none; padding: 0; margin: 0; }
   li { padding: 8px 0; border-bottom: 1px solid #1c2333; font-size: 13px; }
   li:last-child { border-bottom: none; }
@@ -22,20 +27,32 @@
   .status { font-size: 12px; color: #6b7280; margin-top: 20px; }
   .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #34d399; margin-right: 6px; animation: pulse 1.5s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .spend-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid, .spend-row { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
   <h1><span class="pulse"></span>Hedera x402 Gateway — Live Dashboard</h1>
 
-  <div class="grid">
+  <div class="spend-row" style="margin-top:20px;">
     <div class="card">
-      <h2>Gasto de hoy (guardrail)</h2>
-      <div id="policyBadge" style="font-size:11px; margin-bottom:6px;"></div>
-      <div class="big" id="spent">—</div>
-      <div class="bar-bg"><div class="bar-fill" id="bar" style="width:0%"></div></div>
-      <div style="margin-top:8px; font-size:12px; color:#8b95a8;" id="limits">—</div>
+      <h2>Gasto de hoy <span class="asset-tag hbar">HBAR · 0.0.0</span></h2>
+      <div id="policyBadge-hbar" style="font-size:11px; margin-bottom:6px;"></div>
+      <div class="big" id="spent-hbar">—</div>
+      <div class="bar-bg"><div class="bar-fill" id="bar-hbar" style="width:0%"></div></div>
+      <div style="margin-top:8px; font-size:12px; color:#8b95a8;" id="limits-hbar">—</div>
     </div>
 
+    <div class="card">
+      <h2>Gasto de hoy <span class="asset-tag usdc">USDC · 0.0.429274</span></h2>
+      <div id="policyBadge-usdc" style="font-size:11px; margin-bottom:6px;"></div>
+      <div class="big usdc" id="spent-usdc">—</div>
+      <div class="bar-bg"><div class="bar-fill usdc" id="bar-usdc" style="width:0%"></div></div>
+      <div style="margin-top:8px; font-size:12px; color:#8b95a8;" id="limits-usdc">—</div>
+    </div>
+  </div>
+
+  <div class="grid">
     <div class="card">
       <h2>Topic HCS de atestación</h2>
       <div id="topic" style="font-size:13px;">—</div>
@@ -46,7 +63,7 @@
       <ul id="payments"><li>Cargando...</li></ul>
     </div>
 
-    <div class="card">
+    <div class="card" style="grid-column: span 2;">
       <h2>Últimas atestaciones (HCS)</h2>
       <ul id="attestations"><li>Cargando...</li></ul>
     </div>
@@ -55,24 +72,41 @@
   <div class="status" id="lastUpdate">Actualizando cada 3 segundos...</div>
 
 <script>
+function renderAssetCard(suffix, data) {
+  const pct = Math.min(100, (Number(data.spend.spentToday) / Number(data.limits.maxDailyTinybars)) * 100);
+  const d = data.spendDecimal;
+
+  let mainText = `${d.spentToday} ${d.symbol}`;
+  if (d.usdApproxSpentToday !== null) {
+  const usdNum = Number(d.usdApproxSpentToday);
+  const usdDisplay = usdNum < 0.01 && usdNum > 0 ? '<$0.01' : `$${d.usdApproxSpentToday}`;
+  mainText += ` (~${usdDisplay})`;
+}
+
+  document.getElementById(`spent-${suffix}`).textContent = mainText;
+  document.getElementById(`policyBadge-${suffix}`).innerHTML = data.spend.isCustomPolicy
+    ? `<span style="color:#fbbf24;">⚡ Política personalizada${data.spend.label ? ': ' + data.spend.label : ''}</span>`
+    : `<span style="color:#6b7280;">Usando límites globales</span>`;
+  document.getElementById(`bar-${suffix}`).style.width = pct + '%';
+  document.getElementById(`limits-${suffix}`).textContent =
+    `Límite/tx: ${d.maxPerTx} ${d.symbol} · Límite diario: ${d.maxDaily} ${d.symbol} · Restante: ${d.remainingToday} ${d.symbol}`;
+}
+
 async function refresh() {
   try {
-    const res = await fetch('/admin/dashboard-data');
-    const data = await res.json();
+    const [hbarData, usdcData] = await Promise.all([
+      fetch('/admin/dashboard-data?asset=0.0.0').then(r => r.json()),
+      fetch('/admin/dashboard-data?asset=0.0.429274').then(r => r.json()),
+    ]);
 
-    const pct = Math.min(100, (Number(data.spend.spentToday) / Number(data.limits.maxDailyTinybars)) * 100);
-    document.getElementById('spent').textContent = `${data.spend.spentToday} tinybars`;
-    document.getElementById('policyBadge').innerHTML = data.spend.isCustomPolicy
-      ? `<span style="color:#fbbf24;">⚡ Política personalizada${data.spend.label ? ': ' + data.spend.label : ''}</span>`
-      : `<span style="color:#6b7280;">Usando límites globales</span>`;
-    document.getElementById('bar').style.width = pct + '%';
-    document.getElementById('limits').textContent =
-      `Límite/tx: ${data.spend.maxPerTx} · Límite diario: ${data.spend.maxDaily} · Restante: ${data.spend.remainingToday}`;
+    renderAssetCard('hbar', hbarData);
+    renderAssetCard('usdc', usdcData);
 
+    // Topic, pagos y atestaciones son compartidos entre assets — se toman de cualquiera de las dos respuestas
     document.getElementById('topic').innerHTML =
-      `<a href="https://hashscan.io/testnet/topic/${data.hcsTopicId}" target="_blank">${data.hcsTopicId} ↗</a>`;
+      `<a href="https://hashscan.io/testnet/topic/${hbarData.hcsTopicId}" target="_blank">${hbarData.hcsTopicId} ↗</a>`;
 
-    document.getElementById('payments').innerHTML = data.recentPayments.map(p => `
+    document.getElementById('payments').innerHTML = hbarData.recentPayments.map(p => `
       <li>
         <span class="badge success">${p.result}</span>
         ${p.timestamp}<br>
@@ -80,11 +114,11 @@ async function refresh() {
       </li>
     `).join('') || '<li>Sin pagos aún</li>';
 
-    document.getElementById('attestations').innerHTML = data.attestations.map(a => `
-      <li>
-        seq #${a.sequenceNumber} — ${a.decoded.amount} tinybars<br>
-        <a href="${a.hashscanUrl}" target="_blank">Topic en HashScan ↗</a>
-      </li>
+    document.getElementById('attestations').innerHTML = hbarData.attestations.map(a => `
+  <li>
+    seq #${a.sequenceNumber} — ${a.decodedAmount} ${a.decodedSymbol} (<code>${a.decoded.route}</code>)<br>
+    <a href="${a.hashscanUrl}" target="_blank">Topic en HashScan ↗</a>
+  </li>
     `).join('') || '<li>Sin atestaciones aún</li>';
 
     document.getElementById('lastUpdate').textContent = 'Última actualización: ' + new Date().toLocaleTimeString();

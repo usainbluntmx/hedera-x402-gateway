@@ -10,6 +10,8 @@ import {
 import { config } from "../config/env.js";
 import { checkSpendLimit } from "./spend-guard.js";
 
+const HBAR_ASSET_ID = "0.0.0"; // este scheduler solo maneja HBAR nativo por ahora
+
 /**
  * Crea un pago programado en Hedera: el comprador pre-autoriza el gasto
  * una sola vez, y la red lo ejecuta sola cuando llega la hora — sin que
@@ -25,7 +27,7 @@ export async function scheduleAgentPayment({
   delayMinutes,
   memo,
 }) {
-  const check = checkSpendLimit(buyerAccountId, amountTinybars);
+  const check = checkSpendLimit(buyerAccountId, HBAR_ASSET_ID, amountTinybars);
   if (!check.allowed) {
     throw new Error(`🛑 Guardrail bloqueó la programación: ${check.reason}`);
   }

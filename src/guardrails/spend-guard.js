@@ -1,4 +1,3 @@
-import { config } from "../config/env.js";
 import { db } from "./db.js";
 import { getAgentPolicy } from "./policies.js";
 
@@ -9,53 +8,54 @@ function todayKey() {
 const sumStmt = db.prepare(`
   SELECT COALESCE(SUM(CAST(amount_tinybars AS INTEGER)), 0) AS total
   FROM spend_log
-  WHERE account_id = ? AND day = ?
+  WHERE account_id = ? AND asset_id = ? AND day = ?
 `);
 
 const insertStmt = db.prepare(`
-  INSERT INTO spend_log (account_id, day, amount_tinybars)
-  VALUES (?, ?, ?)
+  INSERT INTO spend_log (account_id, asset_id, day, amount_tinybars)
+  VALUES (?, ?, ?, ?)
 `);
 
-function getSpentToday(accountId) {
-  const row = sumStmt.get(accountId, todayKey());
+function getSpentToday(accountId, assetId) {
+  const row = sumStmt.get(accountId, assetId, todayKey());
   return BigInt(row.total);
 }
 
-export function checkSpendLimit(accountId, amountTinybars) {
+export function checkSpendLimit(accountId, assetId, amountTinybars) {
   const amount = BigInt(amountTinybars);
-  const policy = getAgentPolicy(accountId);
+  const policy = getAgentPolicy(accountId, assetId);
 
   if (amount > policy.maxTxTinybars) {
     return {
       allowed: false,
-      reason: `Monto ${amount} excede el límite por transacción de este agente (${policy.maxTxTinybars} tinybars${policy.isCustom ? ", política personalizada" : ", límite global"})`,
+      reason: `Monto ${amount} excede el límite por transacción para el asset ${assetId} (${policy.maxTxTinybars})`,
     };
   }
 
-  const spentToday = getSpentToday(accountId);
+  const spentToday = getSpentToday(accountId, assetId);
   const projected = spentToday + amount;
 
   if (projected > policy.maxDailyTinybars) {
     return {
       allowed: false,
-      reason: `Gasto diario proyectado ${projected} excede el límite diario de este agente (${policy.maxDailyTinybars} tinybars${policy.isCustom ? ", política personalizada" : ", límite global"}). Ya gastado hoy: ${spentToday}`,
+      reason: `Gasto diario proyectado ${projected} excede el límite diario para el asset ${assetId} (${policy.maxDailyTinybars}). Ya gastado hoy: ${spentToday}`,
     };
   }
 
   return { allowed: true, spentToday, projected, policy };
 }
 
-export function recordSpend(accountId, amountTinybars) {
-  insertStmt.run(accountId, todayKey(), amountTinybars.toString());
+export function recordSpend(accountId, assetId, amountTinybars) {
+  insertStmt.run(accountId, assetId, todayKey(), amountTinybars.toString());
 }
 
-export function getSpendStatus(accountId) {
-  const spentToday = getSpentToday(accountId);
-  const policy = getAgentPolicy(accountId);
+export function getSpendStatus(accountId, assetId) {
+  const spentToday = getSpentToday(accountId, assetId);
+  const policy = getAgentPolicy(accountId, assetId);
 
   return {
     accountId,
+    assetId,
     label: policy.label,
     isCustomPolicy: policy.isCustom,
     spentToday: spentToday.toString(),
