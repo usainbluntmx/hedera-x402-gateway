@@ -18,19 +18,23 @@ export function initGuardrailDb(dbPath = "./guardrails.sqlite") {
     CREATE TABLE IF NOT EXISTS spend_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       account_id TEXT NOT NULL,
+      asset_id TEXT NOT NULL DEFAULT '0.0.0',
       day TEXT NOT NULL,
       amount_tinybars TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
-    CREATE INDEX IF NOT EXISTS idx_spend_account_day ON spend_log (account_id, day);
+    CREATE INDEX IF NOT EXISTS idx_spend_account_asset_day
+      ON spend_log (account_id, asset_id, day);
 
     CREATE TABLE IF NOT EXISTS agent_policies (
-      account_id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL,
+      asset_id TEXT NOT NULL DEFAULT '0.0.0',
       label TEXT,
       max_tx_tinybars TEXT NOT NULL,
       max_daily_tinybars TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (account_id, asset_id)
     );
   `);
 
