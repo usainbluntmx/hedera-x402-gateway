@@ -11,19 +11,19 @@ export async function guardedFetch(fetchWithPayment, accountId, url, options = {
   if (probe.status !== 402) return probe;
 
   const header = probe.headers.get("payment-required");
-  if (!header) throw new Error("Respuesta 402 sin header PAYMENT-REQUIRED");
+  if (!header) throw new Error("402 response missing PAYMENT-REQUIRED header");
 
   const requirements = decodePaymentRequired(header);
   const accepted = requirements.accepts?.[0];
-  if (!accepted) throw new Error("No se encontraron opciones de pago en la respuesta 402");
+  if (!accepted) throw new Error("No payment options found in the 402 response");
 
   const check = checkSpendLimit(accountId, accepted.asset, accepted.amount);
   if (!check.allowed) {
-    throw new Error(`🛑 Guardrail bloqueó el pago: ${check.reason}`);
+    throw new Error(`🛑 Guardrail blocked the payment: ${check.reason}`);
   }
 
   console.log(
-    `✅ Guardrail aprobó el pago: ${accepted.amount} unidades de ${accepted.asset} (gastado hoy: ${check.spentToday}, proyectado: ${check.projected})`,
+    `✅ Guardrail approved the payment: ${accepted.amount} units of ${accepted.asset} (spent today: ${check.spentToday}, projected: ${check.projected})`,
   );
 
   const response = await fetchWithPayment(url, options);

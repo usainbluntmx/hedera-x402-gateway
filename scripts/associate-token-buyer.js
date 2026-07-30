@@ -8,7 +8,7 @@ import {
 
 const accountId = AccountId.fromString(process.env.BUYER_ACCOUNT_ID);
 const privateKey = PrivateKey.fromStringECDSA(process.env.BUYER_PRIVATE_KEY);
-const TOKEN_ID = "0.0.429274"; // USDC testnet, confirmado en @x402/hedera
+const TOKEN_ID = "0.0.429274"; // USDC testnet, confirmed in @x402/hedera
 
 const client = Client.forTestnet();
 client.setOperator(accountId, privateKey);
@@ -22,7 +22,7 @@ const tx = await new TokenAssociateTransaction()
 const submit = await tx.execute(client);
 const receipt = await submit.getReceipt(client);
 
-console.log("Estado de la asociación:", receipt.status.toString());
+console.log("Association status:", receipt.status.toString());
 console.log("Transaction ID:", submit.transactionId.toString());
 
 client.close();

@@ -10,15 +10,15 @@ import {
 import { config } from "../config/env.js";
 import { checkSpendLimit } from "./spend-guard.js";
 
-const HBAR_ASSET_ID = "0.0.0"; // este scheduler solo maneja HBAR nativo por ahora
+const HBAR_ASSET_ID = "0.0.0"; // this scheduler only handles native HBAR for now
 
 /**
- * Crea un pago programado en Hedera: el comprador pre-autoriza el gasto
- * una sola vez, y la red lo ejecuta sola cuando llega la hora — sin que
- * el comprador tenga que estar en línea ni volver a firmar.
+ * Creates a scheduled payment on Hedera: the buyer pre-authorizes the
+ * spend once, and the network executes it on its own when it comes due —
+ * with no need for the buyer to be online or sign again.
  *
- * El guardrail de gasto se evalúa AL MOMENTO DE PROGRAMAR, no al ejecutarse,
- * ya que es cuando tenemos control real sobre la decisión.
+ * The spend guardrail is evaluated AT SCHEDULING TIME, not at execution,
+ * since that's when we actually have control over the decision.
  */
 export async function scheduleAgentPayment({
   buyerAccountId,
@@ -29,7 +29,7 @@ export async function scheduleAgentPayment({
 }) {
   const check = checkSpendLimit(buyerAccountId, HBAR_ASSET_ID, amountTinybars);
   if (!check.allowed) {
-    throw new Error(`🛑 Guardrail bloqueó la programación: ${check.reason}`);
+    throw new Error(`🛑 Guardrail blocked the scheduling: ${check.reason}`);
   }
 
   const buyerId = AccountId.fromString(buyerAccountId);

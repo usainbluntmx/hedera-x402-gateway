@@ -8,7 +8,7 @@ const hederaSigner = createClientHederaSigner(
   { network: "hedera:testnet" },
 );
 
-// Simulamos los mismos paymentRequirements que vimos en el header 402 decodificado
+// Simulating the same paymentRequirements we saw in the decoded 402 header
 const requirements = {
   scheme: "exact",
   network: "hedera:testnet",
@@ -20,11 +20,11 @@ const requirements = {
 };
 
 const base64Tx = await hederaSigner.createPartiallySignedTransferTransaction(requirements);
-console.log("Transacción firmada (base64), longitud:", base64Tx.length);
+console.log("Signed transaction (base64), length:", base64Tx.length);
 
 const decoded = Transaction.fromBytes(Buffer.from(base64Tx, "base64"));
 console.log("Transaction ID:", decoded.transactionId?.toString());
-console.log("Token transfers (interno, fuente real):");
+console.log("Token transfers (internal, real source):");
 for (const t of decoded._tokenTransfers) {
   console.log({
     tokenId: t.tokenId.toString(),

@@ -19,9 +19,10 @@ function getClient() {
 }
 
 /**
- * Escribe un mensaje de atestación a HCS por cada pago liquidado.
- * No bloquea la respuesta al cliente — corre en segundo plano ("fire and forget"),
- * con manejo de error propio para no tumbar el request si HCS falla.
+ * Writes an HCS attestation message for every settled payment.
+ * Doesn't block the response to the client — runs in the background
+ * ("fire and forget"), with its own error handling so a failed HCS
+ * write never takes down the request.
  */
 export async function attestPayment({ route, payer, amount, asset, transactionId }) {
   try {
@@ -40,10 +41,10 @@ export async function attestPayment({ route, payer, amount, asset, transactionId
       .execute(getClient());
 
     const receipt = await tx.getReceipt(getClient());
-    console.log(`📝 Atestación en HCS registrada — seq #${receipt.topicSequenceNumber}`);
+    console.log(`📝 HCS attestation recorded — seq #${receipt.topicSequenceNumber}`);
     return { success: true, sequenceNumber: receipt.topicSequenceNumber.toString() };
   } catch (error) {
-    console.error("⚠️ Falló la atestación en HCS (no afecta el pago ya liquidado):", error.message);
+    console.error("⚠️ HCS attestation failed (doesn't affect the already-settled payment):", error.message);
     return { success: false, error: error.message };
   }
 }

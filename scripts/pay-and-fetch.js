@@ -21,7 +21,7 @@ client.register(HEDERA_NETWORK, new ExactHederaScheme(hederaSigner));
 const fetchWithPayment = wrapFetchWithPayment(fetch, client);
 const httpClient = new x402HTTPClient(client);
 
-console.log("Solicitando recurso pago (con guardrail activo)...");
+console.log("Requesting paid resource (guardrail active)...");
 
 try {
   const response = await guardedFetch(
@@ -31,11 +31,11 @@ try {
     { method: "GET" },
   );
 
-  console.log("Status HTTP final:", response.status);
+  console.log("Final HTTP status:", response.status);
 
   const result = await httpClient.processResponse(response);
-  console.log("Respuesta del servidor:", result.body);
-  console.log("Estado del pago:", result.paymentStatus);
+  console.log("Server response:", result.body);
+  console.log("Payment status:", result.paymentStatus);
 } catch (error) {
   console.error("❌", error.message);
 }

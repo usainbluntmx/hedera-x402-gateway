@@ -28,7 +28,7 @@ export function checkSpendLimit(accountId, assetId, amountTinybars) {
   if (amount > policy.maxTxTinybars) {
     return {
       allowed: false,
-      reason: `Monto ${amount} excede el límite por transacción para el asset ${assetId} (${policy.maxTxTinybars})`,
+      reason: `Amount ${amount} exceeds the per-transaction limit for asset ${assetId} (${policy.maxTxTinybars})`,
     };
   }
 
@@ -38,7 +38,7 @@ export function checkSpendLimit(accountId, assetId, amountTinybars) {
   if (projected > policy.maxDailyTinybars) {
     return {
       allowed: false,
-      reason: `Gasto diario proyectado ${projected} excede el límite diario para el asset ${assetId} (${policy.maxDailyTinybars}). Ya gastado hoy: ${spentToday}`,
+      reason: `Projected daily spend ${projected} exceeds the daily limit for asset ${assetId} (${policy.maxDailyTinybars}). Already spent today: ${spentToday}`,
     };
   }
 

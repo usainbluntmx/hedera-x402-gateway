@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Hedera x402 Gateway — Dashboard</title>
@@ -36,7 +36,7 @@
 
   <div class="spend-row" style="margin-top:20px;">
     <div class="card">
-      <h2>Gasto de hoy <span class="asset-tag hbar">HBAR · 0.0.0</span></h2>
+      <h2>Spend today <span class="asset-tag hbar">HBAR · 0.0.0</span></h2>
       <div id="policyBadge-hbar" style="font-size:11px; margin-bottom:6px;"></div>
       <div class="big" id="spent-hbar">—</div>
       <div class="bar-bg"><div class="bar-fill" id="bar-hbar" style="width:0%"></div></div>
@@ -44,7 +44,7 @@
     </div>
 
     <div class="card">
-      <h2>Gasto de hoy <span class="asset-tag usdc">USDC · 0.0.429274</span></h2>
+      <h2>Spend today <span class="asset-tag usdc">USDC · 0.0.429274</span></h2>
       <div id="policyBadge-usdc" style="font-size:11px; margin-bottom:6px;"></div>
       <div class="big usdc" id="spent-usdc">—</div>
       <div class="bar-bg"><div class="bar-fill usdc" id="bar-usdc" style="width:0%"></div></div>
@@ -54,22 +54,22 @@
 
   <div class="grid">
     <div class="card">
-      <h2>Topic HCS de atestación</h2>
+      <h2>HCS attestation topic</h2>
       <div id="topic" style="font-size:13px;">—</div>
     </div>
 
     <div class="card">
-      <h2>Últimos pagos (on-chain)</h2>
-      <ul id="payments"><li>Cargando...</li></ul>
+      <h2>Recent payments (on-chain)</h2>
+      <ul id="payments"><li>Loading...</li></ul>
     </div>
 
     <div class="card" style="grid-column: span 2;">
-      <h2>Últimas atestaciones (HCS)</h2>
-      <ul id="attestations"><li>Cargando...</li></ul>
+      <h2>Recent attestations (HCS)</h2>
+      <ul id="attestations"><li>Loading...</li></ul>
     </div>
   </div>
 
-  <div class="status" id="lastUpdate">Actualizando cada 3 segundos...</div>
+  <div class="status" id="lastUpdate">Refreshing every 3 seconds...</div>
 
 <script>
 function renderAssetCard(suffix, data) {
@@ -78,18 +78,18 @@ function renderAssetCard(suffix, data) {
 
   let mainText = `${d.spentToday} ${d.symbol}`;
   if (d.usdApproxSpentToday !== null) {
-  const usdNum = Number(d.usdApproxSpentToday);
-  const usdDisplay = usdNum < 0.01 && usdNum > 0 ? '<$0.01' : `$${d.usdApproxSpentToday}`;
-  mainText += ` (~${usdDisplay})`;
-}
+    const usdNum = Number(d.usdApproxSpentToday);
+    const usdDisplay = usdNum < 0.01 && usdNum > 0 ? '<$0.01' : `$${d.usdApproxSpentToday}`;
+    mainText += ` (~${usdDisplay})`;
+  }
 
   document.getElementById(`spent-${suffix}`).textContent = mainText;
   document.getElementById(`policyBadge-${suffix}`).innerHTML = data.spend.isCustomPolicy
-    ? `<span style="color:#fbbf24;">⚡ Política personalizada${data.spend.label ? ': ' + data.spend.label : ''}</span>`
-    : `<span style="color:#6b7280;">Usando límites globales</span>`;
+    ? `<span style="color:#fbbf24;">⚡ Custom policy${data.spend.label ? ': ' + data.spend.label : ''}</span>`
+    : `<span style="color:#6b7280;">Using global limits</span>`;
   document.getElementById(`bar-${suffix}`).style.width = pct + '%';
   document.getElementById(`limits-${suffix}`).textContent =
-    `Límite/tx: ${d.maxPerTx} ${d.symbol} · Límite diario: ${d.maxDaily} ${d.symbol} · Restante: ${d.remainingToday} ${d.symbol}`;
+    `Per-tx limit: ${d.maxPerTx} ${d.symbol} · Daily limit: ${d.maxDaily} ${d.symbol} · Remaining: ${d.remainingToday} ${d.symbol}`;
 }
 
 async function refresh() {
@@ -102,7 +102,7 @@ async function refresh() {
     renderAssetCard('hbar', hbarData);
     renderAssetCard('usdc', usdcData);
 
-    // Topic, pagos y atestaciones son compartidos entre assets — se toman de cualquiera de las dos respuestas
+    // Topic, payments, and attestations are shared across assets — taken from either response
     document.getElementById('topic').innerHTML =
       `<a href="https://hashscan.io/testnet/topic/${hbarData.hcsTopicId}" target="_blank">${hbarData.hcsTopicId} ↗</a>`;
 
@@ -112,18 +112,18 @@ async function refresh() {
         ${p.timestamp}<br>
         <a href="${p.hashscanUrl}" target="_blank">${p.transactionId} ↗</a>
       </li>
-    `).join('') || '<li>Sin pagos aún</li>';
+    `).join('') || '<li>No payments yet</li>';
 
     document.getElementById('attestations').innerHTML = hbarData.attestations.map(a => `
-  <li>
-    seq #${a.sequenceNumber} — ${a.decodedAmount} ${a.decodedSymbol} (<code>${a.decoded.route}</code>)<br>
-    <a href="${a.hashscanUrl}" target="_blank">Topic en HashScan ↗</a>
-  </li>
-    `).join('') || '<li>Sin atestaciones aún</li>';
+      <li>
+        seq #${a.sequenceNumber} — ${a.decodedAmount} ${a.decodedSymbol} (<code>${a.decoded.route}</code>)<br>
+        <a href="${a.hashscanUrl}" target="_blank">Topic on HashScan ↗</a>
+      </li>
+    `).join('') || '<li>No attestations yet</li>';
 
-    document.getElementById('lastUpdate').textContent = 'Última actualización: ' + new Date().toLocaleTimeString();
+    document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
   } catch (err) {
-    document.getElementById('lastUpdate').textContent = 'Error actualizando: ' + err.message;
+    document.getElementById('lastUpdate').textContent = 'Error refreshing: ' + err.message;
   }
 }
 

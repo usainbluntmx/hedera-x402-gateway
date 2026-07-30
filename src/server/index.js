@@ -22,7 +22,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", account: config.hederaAccountId, network: config.hederaNetwork });
 });
 
-// Ahora protegido: sin pago responde 402, con pago responde 200
+// Now protected: unpaid responds 402, paid responds 200
 app.use(
   paymentMiddleware(
     {
@@ -36,15 +36,15 @@ app.use(
 
 app.get("/data/example", (req, res) => {
   const responseBody = {
-    message: "Pagaste por esto vía x402 en Hedera testnet 🎉",
+    message: "You paid for this via x402 on Hedera testnet 🎉",
     timestamp: new Date().toISOString(),
   };
 
   res.json(responseBody);
 
-  // El header payment-response lo agrega el middleware DESPUÉS de que el
-  // handler termina (liquidación post-respuesta), así que esperamos al
-  // evento "finish" para leerlo con certeza de que ya está presente.
+  // The payment-response header is added by the middleware AFTER the
+  // handler returns (post-response settlement), so we wait for the
+  // "finish" event to read it with certainty that it's already present.
   res.on("finish", () => {
     const paymentResponseHeader = res.getHeader("payment-response");
     if (!paymentResponseHeader) return;
@@ -65,7 +65,7 @@ app.get("/data/example", (req, res) => {
 
 app.get("/data/premium", (req, res) => {
   const responseBody = {
-    message: "Acceso premium desbloqueado vía x402 — dataset extendido 🎉",
+    message: "Premium access unlocked via x402 — extended dataset 🎉",
     dataset: { points: 1000, resolution: "high", generatedAt: new Date().toISOString() },
   };
 
@@ -91,7 +91,7 @@ app.get("/data/premium", (req, res) => {
 
 app.get("/data/example-usdc", (req, res) => {
   const responseBody = {
-    message: "Pagaste en USDC vía x402 en Hedera testnet 💵",
+    message: "You paid in USDC via x402 on Hedera testnet 💵",
     timestamp: new Date().toISOString(),
   };
 
@@ -115,14 +115,14 @@ app.get("/data/example-usdc", (req, res) => {
   });
 });
 
-// Consultar el estado de gasto de una cuenta compradora específica
+// Check the spend status of a specific buyer account
 app.get("/admin/spend/:accountId", (req, res) => {
   const assetId = req.query.asset || "0.0.0";
   const status = getSpendStatus(req.params.accountId, assetId);
   res.json(status);
 });
 
-// Consultar los límites globales configurados
+// Check the configured global limits
 app.get("/admin/limits", (req, res) => {
   const assetId = req.query.asset || "0.0.0";
   const defaults = config.assetDefaults[assetId] || config.assetDefaults["0.0.0"];
@@ -201,12 +201,12 @@ app.get("/admin/dashboard-data", async (req, res) => {
   });
 });
 
-// Crear o actualizar la política de un agente específico
+// Create or update the policy for a specific agent
 app.post("/admin/policies/:accountId", express.json(), (req, res) => {
   const { assetId, label, maxTxTinybars, maxDailyTinybars } = req.body;
 
   if (!assetId || !maxTxTinybars || !maxDailyTinybars) {
-    return res.status(400).json({ error: "Faltan campos: assetId, maxTxTinybars, maxDailyTinybars" });
+    return res.status(400).json({ error: "Missing fields: assetId, maxTxTinybars, maxDailyTinybars" });
   }
 
   const policy = setAgentPolicy(req.params.accountId, assetId, { label, maxTxTinybars, maxDailyTinybars });
@@ -227,14 +227,14 @@ app.delete("/admin/policies/:accountId", (req, res) => {
   res.json({ deleted });
 });
 
-// El comprador pre-autoriza un pago futuro — el guardrail se evalúa aquí,
-// no en el momento de ejecución (que ocurre sin intervención humana).
+// The buyer pre-authorizes a future payment — the guardrail is evaluated
+// here, not at execution time (which happens with no human intervention).
 app.post("/schedule-payment", express.json(), async (req, res) => {
   const { buyerAccountId, buyerPrivateKey, amountTinybars, delayMinutes, memo } = req.body;
 
   if (!buyerAccountId || !buyerPrivateKey || !amountTinybars || !delayMinutes) {
     return res.status(400).json({
-      error: "Faltan campos: buyerAccountId, buyerPrivateKey, amountTinybars, delayMinutes",
+      error: "Missing fields: buyerAccountId, buyerPrivateKey, amountTinybars, delayMinutes",
     });
   }
 
@@ -256,5 +256,5 @@ app.post("/schedule-payment", express.json(), async (req, res) => {
 startScheduleTracker();
 
 app.listen(config.port, () => {
-  console.log(`Servidor escuchando en http://localhost:${config.port}`);
+  console.log(`Server listening at http://localhost:${config.port}`);
 });

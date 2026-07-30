@@ -11,7 +11,7 @@ const balance = await new AccountBalanceQuery()
   .setAccountId(accountId)
   .execute(client);
 
-console.log(`Cuenta: ${accountId.toString()}`);
+console.log(`Account: ${accountId.toString()}`);
 console.log(`Balance: ${balance.hbars.toString()}`);
 
 client.close();

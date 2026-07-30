@@ -1,9 +1,9 @@
 import { recordSpend } from "./spend-guard.js";
 import { attestPayment } from "./attestation.js";
 
-const HBAR_ASSET_ID = "0.0.0"; // este tracker solo maneja schedules de HBAR nativo
+const HBAR_ASSET_ID = "0.0.0"; // this tracker only handles native HBAR schedules
 
-// Registro en memoria de schedules pendientes de confirmar
+// In-memory registry of schedules pending confirmation
 const pendingSchedules = new Map(); // scheduleId -> { buyerAccountId, amountTinybars }
 
 export function trackSchedule(scheduleId, buyerAccountId, amountTinybars) {
@@ -11,9 +11,9 @@ export function trackSchedule(scheduleId, buyerAccountId, amountTinybars) {
 }
 
 /**
- * Revisa los schedules pendientes contra el Mirror Node. Si ya se ejecutaron,
- * registra el gasto y dispara la atestación en HCS — cerrando el ciclo
- * completo aunque nadie haya estado presente cuando ocurrió el pago.
+ * Checks pending schedules against the Mirror Node. If one has executed,
+ * records the spend and triggers the HCS attestation — closing the full
+ * loop even though no one was present when the payment happened.
  */
 export async function pollPendingSchedules() {
   for (const [scheduleId, info] of pendingSchedules.entries()) {
@@ -27,7 +27,7 @@ export async function pollPendingSchedules() {
       recordSpend(info.buyerAccountId, HBAR_ASSET_ID, info.amountTinybars);
       info.confirmed = true;
 
-      console.log(`✅ Schedule ${scheduleId} confirmado ejecutado — gasto registrado`);
+      console.log(`✅ Schedule ${scheduleId} confirmed executed — spend recorded`);
 
       attestPayment({
         route: "/schedule-payment",

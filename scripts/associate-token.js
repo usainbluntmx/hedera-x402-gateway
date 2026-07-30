@@ -22,7 +22,7 @@ const tx = await new TokenAssociateTransaction()
 const submit = await tx.execute(client);
 const receipt = await submit.getReceipt(client);
 
-console.log("Estado de la asociación:", receipt.status.toString());
+console.log("Association status:", receipt.status.toString());
 console.log("Transaction ID:", submit.transactionId.toString());
 
 client.close();

@@ -23,7 +23,7 @@ const tx = await new AccountCreateTransaction()
 const receipt = await tx.getReceipt(client);
 const newAccountId = receipt.accountId;
 
-console.log("Nueva cuenta (comprador) creada:");
+console.log("New buyer account created:");
 console.log("Account ID:", newAccountId.toString());
 console.log("Private Key (ECDSA):", newKey.toStringRaw());
 

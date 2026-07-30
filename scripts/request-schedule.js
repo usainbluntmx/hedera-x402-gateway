@@ -8,7 +8,7 @@ const res = await fetch("http://localhost:4021/schedule-payment", {
     buyerPrivateKey: process.env.BUYER_PRIVATE_KEY,
     amountTinybars: 1000000,
     delayMinutes: 2,
-    memo: "Pre-autorizado vía API del gateway",
+    memo: "Pre-authorized via gateway API",
   }),
 });
 

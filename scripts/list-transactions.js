@@ -1,8 +1,8 @@
 import "dotenv/config";
 
 const accounts = {
-  vendedor: process.env.HEDERA_ACCOUNT_ID,
-  comprador: process.env.BUYER_ACCOUNT_ID,
+  seller: process.env.HEDERA_ACCOUNT_ID,
+  buyer: process.env.BUYER_ACCOUNT_ID,
 };
 
 async function fetchTransactions(accountId, label) {
@@ -10,7 +10,7 @@ async function fetchTransactions(accountId, label) {
   const res = await fetch(url);
   const data = await res.json();
 
-  console.log(`\n=== Transacciones de ${label} (${accountId}) ===`);
+  console.log(`\n=== Transactions for ${label} (${accountId}) ===`);
   for (const tx of data.transactions) {
     const hashscanId = tx.transaction_id.replace("@", "-").replace(/\./g, "-").replace(/-(\d{9})$/, "-$1");
     console.log(`- ${tx.name} | ${tx.result} | ${tx.consensus_timestamp}`);
@@ -18,5 +18,5 @@ async function fetchTransactions(accountId, label) {
   }
 }
 
-await fetchTransactions(accounts.vendedor, "vendedor");
-await fetchTransactions(accounts.comprador, "comprador");
+await fetchTransactions(accounts.seller, "seller");
+await fetchTransactions(accounts.buyer, "buyer");
